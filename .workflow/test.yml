@@ -1,1 +1,63 @@
+name: Flutter CI with Snyk
+on:
+  push:
+    branches: [videos, main]
+  pull_request:
+    branches: [videos, main]
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Change to Videos Branch
+        run: git switch videos
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.10.0'
+      - name: Install dependencies
+        run: |
+          pwd
+          ls
+          cd duman_app
+          flutter pub get
+      - name: Run tests
+        run: |
+          cd duman_app
+          flutter test
+      - name: Build APK
+        run: |
+          cd duman_app
+          flutter build apk --release
+
+  snyk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: videos  # Checkout directement la branche videos
+      
+      - name: Install Snyk
+        run: npm install -g snyk
+      
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+      
+      - name: Change to Project Directory
+        run: |
+          pwd
+          ls
+          cd duman_app
+      
+      - name: Run Snyk Security Scan
+        run: |
+          snyk test --all-projects || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      
+      - name: Monitor Dependencies in Snyk
+        run: |
+          snyk monitor --all-projects
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
